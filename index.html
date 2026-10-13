@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Theo dõi công việc</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main class="app">
+  <h1>Theo dõi công việc</h1>
+  <form id="add-form">
+    <input id="new-task" type="text" placeholder="Thêm công việc..." autocomplete="off">
+    <input id="new-due" type="datetime-local" title="Hẹn giờ hoàn thành (tuỳ chọn)">
+    <button type="submit">Thêm</button>
+  </form>
+  <nav id="filters">
+    <button type="button" data-filter="all" class="active">Tất cả</button>
+    <button type="button" data-filter="active">Đang làm</button>
+    <button type="button" data-filter="done">Hoàn thành</button>
+  </nav>
+  <p id="summary" aria-live="polite"></p>
+  <ul id="task-list"></ul>
+  <button id="clear-done" type="button">Xoá việc hoàn thành</button>
+</main>
+<script type="module" src="/app.mjs"></script>
+</body>
+</html>
