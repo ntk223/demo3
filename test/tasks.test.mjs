@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   addTask, removeTask, toggleTask, filterTasks, summary, clearDone,
+  updateDue, isOverdue, sortTasksByDue,
 } from '../lib/tasks.mjs'
 
 const seed = () => [
@@ -137,4 +138,101 @@ test('clearDone: không có task đã xong → không đổi, không mutate', ()
 
 test('clearDone: tất cả đã xong → rỗng', () => {
   assert.deepEqual(clearDone([{ id: 'b', text: 'x', done: true }]), [])
+})
+
+// ---- Hẹn lịch hoàn thành (due date) ----
+
+test('addTask: có due → task chứa trường due', () => {
+  assert.deepEqual(addTask([], 'Nộp báo cáo', 't1', '2026-10-20T17:00'), [
+    { id: 't1', text: 'Nộp báo cáo', done: false, due: '2026-10-20T17:00' },
+  ])
+})
+
+test('addTask: không truyền due → task không có trường due', () => {
+  assert.deepEqual(addTask([], 'Không hẹn', 't2'), [
+    { id: 't2', text: 'Không hẹn', done: false },
+  ])
+})
+
+test('addTask: due null → không có trường due, không throw', () => {
+  assert.deepEqual(addTask([], 'Due null', 't3', null), [
+    { id: 't3', text: 'Due null', done: false },
+  ])
+})
+
+test('addTask: due không parse được → throw', () => {
+  assert.throws(() => addTask([], 'Due sai', 't4', 'abc'))
+})
+
+test('addTask: due không phải chuỗi → throw', () => {
+  assert.throws(() => addTask([], 'Due số', 't5', 42))
+})
+
+test('updateDue: gán due cho task', () => {
+  const tasks = updateDue(seed(), 'a', '2026-12-01T09:00')
+  assert.deepEqual(tasks[0], { id: 'a', text: 'Học Node.js', done: false, due: '2026-12-01T09:00' })
+})
+
+test('updateDue: do rỗng → xoá trường due', () => {
+  const tasks = [{ id: 'a', text: 'Có hẹn', done: false, due: '2026-12-01T09:00' }]
+  assert.deepEqual(updateDue(tasks, 'a', ''), [{ id: 'a', text: 'Có hẹn', done: false }])
+})
+
+test('updateDue: id lạ → không đổi, không mutate', () => {
+  const tasks = seed()
+  assert.deepEqual(updateDue(tasks, 'zzz', '2026-12-01T09:00'), seed())
+  assert.deepEqual(tasks, seed())
+})
+
+test('updateDue: due sai → throw, không mutate', () => {
+  const tasks = seed()
+  assert.throws(() => updateDue(tasks, 'a', 'khong-hop-le'))
+  assert.deepEqual(tasks, seed())
+})
+
+test('isOverdue: due quá khứ + chưa xong → true', () => {
+  const now = new Date('2026-10-13T09:00:00')
+  assert.equal(isOverdue({ id: 'x', text: 'a', done: false, due: '2026-10-13T08:00:00' }, now), true)
+})
+
+test('isOverdue: đã hoàn thành → false', () => {
+  const now = new Date('2026-10-13T09:00:00')
+  assert.equal(isOverdue({ id: 'x', text: 'a', done: true, due: '2026-10-13T08:00:00' }, now), false)
+})
+
+test('isOverdue: due tương lai → false', () => {
+  const now = new Date('2026-10-13T09:00:00')
+  assert.equal(isOverdue({ id: 'x', text: 'a', done: false, due: '2026-10-13T10:00:00' }, now), false)
+})
+
+test('isOverdue: không có due → false', () => {
+  const now = new Date('2026-10-13T09:00:00')
+  assert.equal(isOverdue({ id: 'x', text: 'a', done: false }, now), false)
+})
+
+test('isOverdue: due đúng bằng now → false (chưa quá hạn)', () => {
+  const now = new Date('2026-10-13T09:00:00')
+  assert.equal(isOverdue({ id: 'x', text: 'a', done: false, due: '2026-10-13T09:00:00' }, now), false)
+})
+
+test('sortTasksByDue: sắp theo due tăng dần, không due ra cuối', () => {
+  const tasks = [
+    { id: 'c', text: 'C', done: false, due: '2026-02-01T08:00' },
+    { id: 'a', text: 'A', done: false, due: '2026-01-01T08:00' },
+    { id: 'b', text: 'B', done: false },
+  ]
+  assert.deepEqual(sortTasksByDue(tasks).map(t => t.id), ['a', 'c', 'b'])
+})
+
+test('sortTasksByDue: không mutate mảng gốc', () => {
+  const tasks = [
+    { id: 'b', text: 'B', done: false },
+    { id: 'a', text: 'A', done: false, due: '2026-01-01T08:00' },
+  ]
+  sortTasksByDue(tasks)
+  assert.deepEqual(tasks.map(t => t.id), ['b', 'a'])
+})
+
+test('sortTasksByDue: mảng rỗng → rỗng', () => {
+  assert.deepEqual(sortTasksByDue([]), [])
 })
